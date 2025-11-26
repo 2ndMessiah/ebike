@@ -5,9 +5,10 @@ const initialState = {
     totalMileage: 60,
     currentMileage: 0,
     destinations: [
-        { name: 'Home', mileage: 5 },
-        { name: 'Work', mileage: 10 },
-        { name: 'Grocery Store', mileage: 2 },
+        { name: 'Home', mileage: 7.7 },
+        { name: 'Work', mileage: 1.7 },
+        { name: 'Fangzhen', mileage: 3 },
+        { name: 'LGD', mileage: 7.2 }
     ],
     selectedDestinations: []
 };
