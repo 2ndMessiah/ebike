@@ -1,0 +1,104 @@
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    margin: 0;
+    background-color: #f0f2f5;
+    color: #333;
+}
+
+#app {
+    max-width: 600px;
+    margin: 20px auto;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+h1, h2 {
+    color: #1c1e21;
+    border-bottom: 1px solid #dddfe2;
+    padding-bottom: 10px;
+    margin-top: 0;
+}
+
+h1 {
+    text-align: center;
+    font-size: 24px;
+    margin-bottom: 20px;
+}
+
+h2 {
+    font-size: 20px;
+    margin-bottom: 15px;
+}
+
+p {
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+button {
+    background-color: #1877f2;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    padding: 10px 15px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #166fe5;
+}
+
+.dest-btn {
+    background-color: #e7f3ff;
+    color: #1877f2;
+    margin-right: 10px;
+    margin-bottom: 10px;
+}
+
+.dest-btn.selected {
+    background-color: #1877f2;
+    color: #fff;
+}
+
+#add-selected-btn {
+    background-color: #42b72a;
+}
+
+#add-selected-btn:hover {
+    background-color: #36a420;
+}
+
+#clear-selected-btn {
+    background-color: #fa383e;
+}
+
+#clear-selected-btn:hover {
+    background-color: #e33135;
+}
+
+#full-charge-btn {
+    background-color: #f5a623;
+}
+
+#full-charge-btn:hover {
+    background-color: #e49b20;
+}
+
+input[type="number"] {
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #dddfe2;
+    font-size: 16px;
+    margin-right: 10px;
+}
+
+div > div {
+    margin-bottom: 20px;
+    padding: 15px;
+    border: 1px solid #dddfe2;
+    border-radius: 6px;
+}
