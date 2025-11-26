@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Bike Battery Tracker</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            background-color: #f0f2f5;
+            color: #333;
+        }
+
+        #app {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        h1, h2 {
+            color: #1c1e21;
+            border-bottom: 1px solid #dddfe2;
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            font-size: 20px;
+            margin-bottom: 15px;
+        }
+
+        p {
+            font-size: 16px;
+            line-height: 1.5;
+        }
+
+        button {
+            background-color: #1877f2;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            padding: 10px 15px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #166fe5;
+        }
+
+        .dest-btn {
+            background-color: #e7f3ff;
+            color: #1877f2;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .dest-btn.selected {
+            background-color: #1877f2;
+            color: #fff;
+        }
+
+        #add-selected-btn {
+            background-color: #42b72a;
+        }
+
+        #add-selected-btn:hover {
+            background-color: #36a420;
+        }
+
+        #clear-selected-btn {
+            background-color: #fa383e;
+        }
+
+        #clear-selected-btn:hover {
+            background-color: #e33135;
+        }
+
+        #full-charge-btn {
+            background-color: #f5a623;
+        }
+
+        #full-charge-btn:hover {
+            background-color: #e49b20;
+        }
+
+        input[type="number"] {
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #dddfe2;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+
+        div > div {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #dddfe2;
+            border-radius: 6px;
+        }
+        
+        #login-container {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <h1>E-Bike Battery Tracker</h1>
+        <div id="auth-status">
+            <div id="login-container" style="display:none;">
+                <p>Please log in to access your data</p>
+                <a href="/api/auth/github"><button>Log in with GitHub</button></a>
+            </div>
+            <div id="loading" class="loading">Loading...</div>
+        </div>
+        <div id="main-content" style="display:none;">
+        </div>
+        <div id="logout-container" style="text-align: center; margin-top: 20px; display:none;">
+            <button id="logout-btn">Logout</button>
+        </div>
+    </div>
+    <script>
+        const mainContent = document.getElementById('main-content');
+        const loginContainer = document.getElementById('login-container');
+        const loadingElement = document.getElementById('loading');
+        const logoutContainer = document.getElementById('logout-container');
+
+        let state = null;
+        let isAuthenticated = false;
+        let retryCount = 0;
+        const maxRetries = 3;
+
+        // Check authentication status on page load
+        async function checkAuthStatus() {
+            try {
+                const response = await fetch('/api/auth/status');
+                const data = await response.json();
+
+                if (data.authenticated) {
+                    isAuthenticated = true;
+                    const userInfoDiv = document.createElement('div');
+                    userInfoDiv.id = 'user-info';
+                    userInfoDiv.textContent = `Welcome, ${data.user.displayName || data.user.username}!`;
+                    userInfoDiv.style.textAlign = 'center';
+                    userInfoDiv.style.marginBottom = '10px';
+
+                    // Insert after the h1 element
+                    const h1 = document.querySelector('h1');
+                    h1.parentNode.insertBefore(userInfoDiv, h1.nextSibling);
+
+                    logoutContainer.style.display = 'block';
+                    loadState();
+                } else {
+                    isAuthenticated = false;
+                    showLogin();
+                }
+            } catch (error) {
+                console.error('Error checking auth status:', error);
+                showLogin();
+            }
+        }
+
+        function showLogin() {
+            loginContainer.style.display = 'block';
+            loadingElement.style.display = 'none';
+            mainContent.style.display = 'none';
+            logoutContainer.style.display = 'none';
+        }
+
+        async function loadState() {
+            if (!isAuthenticated) {
+                showLogin();
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/data');
+                if (response.ok) {
+                    state = await response.json();
+                    render();
+                    loadingElement.style.display = 'none';
+                    mainContent.style.display = 'block';
+                } else if (response.status === 401) {
+                    showLogin();
+                } else {
+                    throw new Error(`Failed to load data: ${response.status}`);
+                }
+            } catch (error) {
+                console.error('Error loading state:', error);
+
+                // Show error message to user
+                mainContent.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: red;">
+                        <p>Error loading data. Please try refreshing the page.</p>
+                        <button onclick="window.location.reload()">Refresh Page</button>
+                    </div>
+                `;
+                loadingElement.style.display = 'none';
+                mainContent.style.display = 'block';
+            }
+        }
+
+        function saveState() {
+            if (!isAuthenticated || !state) return;
+
+            fetch('/api/data', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(state)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    console.error('Failed to save data:', response.status);
+                    // Optionally show a notification to the user
+                    if (response.status === 401) {
+                        showLogin();
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error saving data:', error);
+                // Optionally show a notification to the user
+            });
+        }
+
+        function render() {
+            if (!state) return;
+
+            const selectionCounts = state.selectedDestinations.reduce((acc, dest) => {
+                acc[dest.name] = (acc[dest.name] || 0) + 1;
+                return acc;
+            }, {});
+
+            mainContent.innerHTML = `
+                <div>
+                    <h2>Status</h2>
+                    <p>Total Mileage: ${state.totalMileage} km</p>
+                    <p>Current Mileage: ${state.currentMileage.toFixed(2)} km</p>
+                    <p>Remaining Mileage: ${(state.totalMileage - state.currentMileage).toFixed(2)} km</p>
+                    <p>Battery: ${((1 - state.currentMileage / state.totalMileage) * 100).toFixed(2)}%</p>
+                </div>
+                <div>
+                    <h2>Quick Add Mileage</h2>
+                    ${state.destinations.map(dest => {
+                        const count = selectionCounts[dest.name] || 0;
+                        return `<button class="dest-btn" data-name="${dest.name}" data-mileage="${dest.mileage}">
+                            ${dest.name} (${dest.mileage} km) ${count > 0 ? `x${count}` : ''}
+                        </button>`
+                    }).join('')}
+                    <button id="add-selected-btn">Add Selected</button>
+                    <button id="clear-selected-btn">Clear Selection</button>
+                </div>
+                <div>
+                    <h2>Calibration</h2>
+                    <button id="full-charge-btn">Set Full Charge</button>
+                    <div>
+                        <label for="current-battery">Set Current Battery (%):</label>
+                        <input type="number" id="current-battery" min="0" max="100" step="1">
+                        <button id="set-battery-btn">Set</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function addMileage(mileage) {
+            state.currentMileage += mileage;
+            state.selectedDestinations = [];
+            saveState();
+            render();
+        }
+
+        function setFullCharge() {
+            state.currentMileage = 0;
+            saveState();
+            render();
+        }
+
+        function setBattery(percentage) {
+            state.currentMileage = state.totalMileage * (1 - percentage / 100);
+            saveState();
+            render();
+        }
+
+        // Event delegation for dynamically created elements
+        mainContent.addEventListener('click', e => {
+            if (!state) return;
+
+            if (e.target.classList.contains('dest-btn')) {
+                const name = e.target.dataset.name;
+                const mileage = parseFloat(e.target.dataset.mileage);
+                state.selectedDestinations.push({ name, mileage });
+                saveState();
+                render();
+            }
+
+            if (e.target.id === 'add-selected-btn') {
+                const totalMileageToAdd = state.selectedDestinations.reduce((total, dest) => total + dest.mileage, 0);
+                if (totalMileageToAdd > 0) {
+                    addMileage(totalMileageToAdd);
+                }
+            }
+
+            if (e.target.id === 'clear-selected-btn') {
+                state.selectedDestinations = [];
+                saveState();
+                render();
+            }
+
+            if (e.target.id === 'full-charge-btn') {
+                setFullCharge();
+            }
+
+            if (e.target.id === 'set-battery-btn') {
+                const batteryInput = document.getElementById('current-battery');
+                const percentage = parseFloat(batteryInput.value);
+                if (!isNaN(percentage) && percentage >= 0 && percentage <= 100) {
+                    setBattery(percentage);
+                    batteryInput.value = '';
+                } else {
+                    alert('Please enter a valid percentage (0-100).');
+                }
+            }
+        });
+
+        // Logout functionality
+        document.getElementById('logout-btn').addEventListener('click', async () => {
+            try {
+                const response = await fetch('/api/auth/logout', { method: 'POST' });
+                if (response.ok) {
+                    isAuthenticated = false;
+                    showLogin();
+                } else {
+                    console.error('Logout failed:', response.status);
+                    alert('Logout failed. Please refresh the page.');
+                }
+            } catch (error) {
+                console.error('Error logging out:', error);
+                alert('Error logging out. Please refresh the page.');
+            }
+        });
+
+        // Initialize the app
+        checkAuthStatus();
+
+        // Handle visibility change to refresh auth status when user comes back to the page
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && isAuthenticated) {
+                // Refresh data when user comes back to the tab
+                if (mainContent.style.display !== 'none') {
+                    loadState();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
