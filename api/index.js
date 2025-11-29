@@ -1,11 +1,13 @@
-const express = require('express');
-const redis = require('redis');
+const { Redis } = require('@upstash/redis');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const path = require('path');
 
 // Configuration variables
-const UPSTASH_REDIS_URL = process.env.UPSTASH_REDIS_URL || 'rediss://default:AVFSAAIncDE3OGQ1MjM4Nzk4MTY0ZDlmOWYxNWNlYTJlMTQ5NjhiYnAxMjA4MTg@primary-locust-20818.upstash.io:6379';
+// For Upstash Redis, ensure these two environment variables are set in Vercel
+const UPSTASH_REDIS_URL = process.env.UPSTASH_REDIS_URL || 'YOUR_UPSTASH_REDIS_URL_HERE';
+const UPSTASH_REDIS_TOKEN = process.env.UPSTASH_REDIS_TOKEN || 'YOUR_UPSTASH_REDIS_TOKEN_HERE';
+
 const JWT_SECRET = process.env.JWT_SECRET || 'Zei4R7!#K8NKz*86C%mgwU!2m^DQHU3T'; // A strong secret for JWT
 const APP_USERNAME = process.env.APP_USERNAME || 'saywhat13'; // Default username
 const APP_PASSWORD = process.env.APP_PASSWORD || 'of9s&t&$2#V#Q9LQ$Urcjs96He5K@^MX'; // Default password
@@ -26,23 +28,11 @@ const DEFAULT_EBIKE_DATA = {
 
 const app = express();
 
-// Set up Redis client
-const redisClient = redis.createClient({
-  url: UPSTASH_REDIS_URL
+// Set up Redis client for Upstash
+const redisClient = new Redis({
+  url: UPSTASH_REDIS_URL,
+  token: UPSTASH_REDIS_TOKEN,
 });
-
-redisClient.on('error', (err) => {
-  console.error('Redis Client Error', err);
-});
-
-(async () => {
-  try {
-    await redisClient.connect();
-    console.log('Connected to Upstash Redis');
-  } catch (error) {
-    console.error('Failed to connect to Redis:', error);
-  }
-})();
 
 // Middleware
 app.use(cors({
@@ -98,7 +88,7 @@ app.get('/api/data', authenticateToken, async (req, res) => {
   try {
     const data = await redisClient.get(`ebike:${req.user.id}`);
     if (data) {
-      res.json(JSON.parse(data));
+      res.json(data); // .get() from @upstash/redis already parses JSON
     } else {
       // Default data for a new user
       res.json(DEFAULT_EBIKE_DATA);
@@ -112,8 +102,8 @@ app.get('/api/data', authenticateToken, async (req, res) => {
 app.post('/api/data', authenticateToken, async (req, res) => {
   try {
     const data = req.body;
-    await redisClient.set(`ebike:${req.user.id}`, JSON.stringify(data), {
-      EX: EBIKE_DATA_EXPIRATION_SECONDS
+    await redisClient.set(`ebike:${req.user.id}`, data, {
+      ex: EBIKE_DATA_EXPIRATION_SECONDS
     });
     res.json({ message: 'Data saved successfully' });
   } catch (error) {
