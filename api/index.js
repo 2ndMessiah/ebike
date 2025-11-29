@@ -112,7 +112,9 @@ app.get('/api/data', authenticateToken, async (req, res) => {
 app.post('/api/data', authenticateToken, async (req, res) => {
   try {
     const data = req.body;
-    await redisClient.setex(`ebike:${req.user.id}`, EBIKE_DATA_EXPIRATION_SECONDS, JSON.stringify(data));
+    await redisClient.set(`ebike:${req.user.id}`, JSON.stringify(data), {
+      EX: EBIKE_DATA_EXPIRATION_SECONDS
+    });
     res.json({ message: 'Data saved successfully' });
   } catch (error) {
     console.error('Error saving data:', error);
