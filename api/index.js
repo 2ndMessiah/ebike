@@ -2,6 +2,7 @@ const express = require('express');
 const redis = require('redis');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
+const path = require('path');
 
 // Configuration variables
 const UPSTASH_REDIS_URL = process.env.UPSTASH_REDIS_URL || 'rediss://default:AVFSAAIncDE3OGQ1MjM4Nzk4MTY0ZDlmOWYxNWNlYTJlMTQ5NjhiYnAxMjA4MTg@primary-locust-20818.upstash.io:6379';
@@ -126,7 +127,7 @@ app.get('/api/health', (req, res) => {
 
 // Serve the main HTML file for the root
 app.get('/', (req, res) => {
-  res.sendFile(__dirname + '/public/index.html');
+  res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
 });
 
 // Export the app for Vercel
