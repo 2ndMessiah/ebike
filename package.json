@@ -12,8 +12,6 @@
     "redis": "^4.6.7",
     "cors": "^2.8.5",
     "dotenv": "^16.0.3",
-    "cookie-parser": "^1.4.6",
-    "express-session": "^1.17.3",
     "passport": "^0.6.0",
     "passport-github2": "^0.1.12",
     "uuid": "^9.0.0",

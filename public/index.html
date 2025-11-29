@@ -53,6 +53,8 @@
             padding: 10px 15px;
             cursor: pointer;
             transition: background-color 0.3s;
+            width: 100%;
+            margin-top: 10px;
         }
 
         button:hover {
@@ -64,6 +66,7 @@
             color: #1877f2;
             margin-right: 10px;
             margin-bottom: 10px;
+            width: auto;
         }
 
         .dest-btn.selected {
@@ -73,6 +76,7 @@
 
         #add-selected-btn {
             background-color: #42b72a;
+            width: auto;
         }
 
         #add-selected-btn:hover {
@@ -81,6 +85,7 @@
 
         #clear-selected-btn {
             background-color: #fa383e;
+            width: auto;
         }
 
         #clear-selected-btn:hover {
@@ -89,18 +94,20 @@
 
         #full-charge-btn {
             background-color: #f5a623;
+            width: auto;
         }
 
         #full-charge-btn:hover {
             background-color: #e49b20;
         }
 
-        input[type="number"] {
+        input[type="number"], input[type="text"], input[type="password"] {
             padding: 10px;
             border-radius: 6px;
             border: 1px solid #dddfe2;
             font-size: 16px;
-            margin-right: 10px;
+            margin-bottom: 10px;
+            width: calc(100% - 22px);
         }
 
         div > div {
@@ -126,8 +133,13 @@
         <h1>E-Bike Battery Tracker</h1>
         <div id="auth-status">
             <div id="login-container" style="display:none;">
-                <p>Please log in to access your data</p>
-                <a href="/api/auth/github"><button>Log in with GitHub</button></a>
+                <h2>Login</h2>
+                <form id="login-form">
+                    <input type="text" id="username" placeholder="Username" required>
+                    <input type="password" id="password" placeholder="Password" required>
+                    <button type="submit">Log In</button>
+                    <p id="login-error" style="color: red; display: none;"></p>
+                </form>
             </div>
             <div id="loading" class="loading">Loading...</div>
         </div>
@@ -142,34 +154,60 @@
         const loginContainer = document.getElementById('login-container');
         const loadingElement = document.getElementById('loading');
         const logoutContainer = document.getElementById('logout-container');
+        const loginForm = document.getElementById('login-form');
+        const loginError = document.getElementById('login-error');
 
         let state = null;
-        let isAuthenticated = false;
-        let retryCount = 0;
-        const maxRetries = 3;
 
-        // Check authentication status on page load
+        function getAuthToken() {
+            return localStorage.getItem('authToken');
+        }
+
+        function setAuthToken(token) {
+            localStorage.setItem('authToken', token);
+        }
+
+        function removeAuthToken() {
+            localStorage.removeItem('authToken');
+        }
+
+        async function apiFetch(url, options = {}) {
+            const token = getAuthToken();
+            const headers = {
+                'Content-Type': 'application/json',
+                ...options.headers,
+            };
+
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            const response = await fetch(url, { ...options, headers });
+
+            if (response.status === 401 || response.status === 403) {
+                // Token is invalid or expired
+                removeAuthToken();
+                showLogin();
+                throw new Error('Authentication failed');
+            }
+
+            return response;
+        }
+
         async function checkAuthStatus() {
+            const token = getAuthToken();
+            if (!token) {
+                showLogin();
+                return;
+            }
+
             try {
-                const response = await fetch('/api/auth/status');
-                const data = await response.json();
-
-                if (data.authenticated) {
-                    isAuthenticated = true;
-                    const userInfoDiv = document.createElement('div');
-                    userInfoDiv.id = 'user-info';
-                    userInfoDiv.textContent = `Welcome, ${data.user.displayName || data.user.username}!`;
-                    userInfoDiv.style.textAlign = 'center';
-                    userInfoDiv.style.marginBottom = '10px';
-
-                    // Insert after the h1 element
-                    const h1 = document.querySelector('h1');
-                    h1.parentNode.insertBefore(userInfoDiv, h1.nextSibling);
-
-                    logoutContainer.style.display = 'block';
+                const response = await apiFetch('/api/auth/status');
+                if (response.ok) {
+                    const data = await response.json();
+                    showMainContent(data.user);
                     loadState();
                 } else {
-                    isAuthenticated = false;
                     showLogin();
                 }
             } catch (error) {
@@ -183,64 +221,54 @@
             loadingElement.style.display = 'none';
             mainContent.style.display = 'none';
             logoutContainer.style.display = 'none';
+            const userInfo = document.getElementById('user-info');
+            if (userInfo) userInfo.remove();
+        }
+
+        function showMainContent(user) {
+            loginContainer.style.display = 'none';
+            loadingElement.style.display = 'none';
+            mainContent.style.display = 'block';
+            logoutContainer.style.display = 'block';
+
+            if (!document.getElementById('user-info')) {
+                const userInfoDiv = document.createElement('div');
+                userInfoDiv.id = 'user-info';
+                userInfoDiv.textContent = `Welcome, ${user.username}!`;
+                userInfoDiv.style.textAlign = 'center';
+                userInfoDiv.style.marginBottom = '10px';
+                const h1 = document.querySelector('h1');
+                h1.parentNode.insertBefore(userInfoDiv, h1.nextSibling);
+            }
         }
 
         async function loadState() {
-            if (!isAuthenticated) {
-                showLogin();
-                return;
-            }
-
             try {
-                const response = await fetch('/api/data');
+                const response = await apiFetch('/api/data');
                 if (response.ok) {
                     state = await response.json();
                     render();
-                    loadingElement.style.display = 'none';
-                    mainContent.style.display = 'block';
-                } else if (response.status === 401) {
-                    showLogin();
                 } else {
                     throw new Error(`Failed to load data: ${response.status}`);
                 }
             } catch (error) {
                 console.error('Error loading state:', error);
-
-                // Show error message to user
-                mainContent.innerHTML = `
-                    <div style="text-align: center; padding: 20px; color: red;">
-                        <p>Error loading data. Please try refreshing the page.</p>
-                        <button onclick="window.location.reload()">Refresh Page</button>
-                    </div>
-                `;
-                loadingElement.style.display = 'none';
-                mainContent.style.display = 'block';
+                if (error.message !== 'Authentication failed') {
+                    mainContent.innerHTML = `<p style="color:red; text-align:center;">Error loading data. Please refresh.</p>`;
+                }
             }
         }
 
-        function saveState() {
-            if (!isAuthenticated || !state) return;
-
-            fetch('/api/data', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(state)
-            })
-            .then(response => {
-                if (!response.ok) {
-                    console.error('Failed to save data:', response.status);
-                    // Optionally show a notification to the user
-                    if (response.status === 401) {
-                        showLogin();
-                    }
-                }
-            })
-            .catch(error => {
+        async function saveState() {
+            if (!state) return;
+            try {
+                await apiFetch('/api/data', {
+                    method: 'POST',
+                    body: JSON.stringify(state)
+                });
+            } catch (error) {
                 console.error('Error saving data:', error);
-                // Optionally show a notification to the user
-            });
+            }
         }
 
         function render() {
@@ -276,7 +304,7 @@
                     <div>
                         <label for="current-battery">Set Current Battery (%):</label>
                         <input type="number" id="current-battery" min="0" max="100" step="1">
-                        <button id="set-battery-btn">Set</button>
+                        <button id="set-battery-btn" style="width:auto;">Set</button>
                     </div>
                 </div>
             `;
@@ -301,7 +329,35 @@
             render();
         }
 
-        // Event delegation for dynamically created elements
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            loginError.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    setAuthToken(data.token);
+                    showMainContent(data.user);
+                    loadState();
+                } else {
+                    loginError.textContent = 'Invalid username or password.';
+                    loginError.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                loginError.textContent = 'An error occurred. Please try again.';
+                loginError.style.display = 'block';
+            }
+        });
+
         mainContent.addEventListener('click', e => {
             if (!state) return;
 
@@ -309,8 +365,7 @@
                 const name = e.target.dataset.name;
                 const mileage = parseFloat(e.target.dataset.mileage);
                 state.selectedDestinations.push({ name, mileage });
-                saveState();
-                render();
+                render(); // Re-render to show selection, but don't save yet
             }
 
             if (e.target.id === 'add-selected-btn') {
@@ -322,7 +377,6 @@
 
             if (e.target.id === 'clear-selected-btn') {
                 state.selectedDestinations = [];
-                saveState();
                 render();
             }
 
@@ -342,35 +396,13 @@
             }
         });
 
-        // Logout functionality
-        document.getElementById('logout-btn').addEventListener('click', async () => {
-            try {
-                const response = await fetch('/api/auth/logout', { method: 'POST' });
-                if (response.ok) {
-                    isAuthenticated = false;
-                    showLogin();
-                } else {
-                    console.error('Logout failed:', response.status);
-                    alert('Logout failed. Please refresh the page.');
-                }
-            } catch (error) {
-                console.error('Error logging out:', error);
-                alert('Error logging out. Please refresh the page.');
-            }
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            removeAuthToken();
+            showLogin();
         });
 
         // Initialize the app
         checkAuthStatus();
-
-        // Handle visibility change to refresh auth status when user comes back to the page
-        document.addEventListener('visibilitychange', () => {
-            if (!document.hidden && isAuthenticated) {
-                // Refresh data when user comes back to the tab
-                if (mainContent.style.display !== 'none') {
-                    loadState();
-                }
-            }
-        });
     </script>
 </body>
 </html>
