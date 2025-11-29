@@ -5,8 +5,8 @@ const path = require('path');
 
 // Configuration variables
 // For Upstash Redis, ensure these two environment variables are set in Vercel
-UPSTASH_REDIS_REST_URL="https://primary-locust-20818.upstash.io"
-UPSTASH_REDIS_REST_TOKEN="AVFSAAIncDE3OGQ1MjM4Nzk4MTY0ZDlmOWYxNWNlYTJlMTQ5NjhiYnAxMjA4MTg"
+const UPSTASH_REDIS_URL = process.env.UPSTASH_REDIS_URL || 'https://primary-locust-20818.upstash.io';
+const UPSTASH_REDIS_TOKEN = process.env.UPSTASH_REDIS_TOKEN || 'AVFSAAIncDE3OGQ1MjM4Nzk4MTY0ZDlmOWYxNWNlYTJlMTQ5NjhiYnAxMjA4MTg';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'Zei4R7!#K8NKz*86C%mgwU!2m^DQHU3T'; // A strong secret for JWT
 const APP_USERNAME = process.env.APP_USERNAME || 'saywhat13'; // Default username
