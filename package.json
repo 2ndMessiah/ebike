@@ -1,7 +1,7 @@
 {
   "name": "ebike-tracker",
   "version": "1.0.0",
-  "description": "E-Bike Battery Tracker with Redis backend and GitHub OAuth",
+  "description": "E-Bike Battery Tracker with Redis backend and JWT authentication",
   "main": "server.js",
   "scripts": {
     "dev": "nodemon server.js",
@@ -12,10 +12,7 @@
     "redis": "^4.6.7",
     "cors": "^2.8.5",
     "dotenv": "^16.0.3",
-    "passport": "^0.6.0",
-    "passport-github2": "^0.1.12",
-    "uuid": "^9.0.0",
-    "body-parser": "^1.20.2"
+    "jsonwebtoken": "^9.0.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.0"
@@ -24,7 +21,7 @@
     "ebike",
     "tracker",
     "redis",
-    "oauth",
+    "jwt",
     "express",
     "vercel"
   ],
