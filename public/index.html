@@ -376,6 +376,10 @@
 
         async function saveState() {
             if (!state) return;
+
+            const manager = document.getElementById('destinations-manager');
+            const managerWasOpen = manager && manager.style.display === 'block';
+
             try {
                 await apiFetch('/api/data', {
                     method: 'POST',
@@ -383,6 +387,13 @@
                 });
                 // No need to re-load, just re-render with current state
                 render();
+
+                if (managerWasOpen) {
+                    const newManager = document.getElementById('destinations-manager');
+                    if (newManager) {
+                        newManager.style.display = 'block';
+                    }
+                }
             } catch (error) {
                 console.error('Error saving data:', error);
                 alert('Failed to save data. Please check your connection and try again.');
