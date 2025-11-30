@@ -21,7 +21,7 @@
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
-        h1, h2 {
+        h1, h2, h3 {
             color: #1c1e21;
             border-bottom: 1px solid #dddfe2;
             padding-bottom: 10px;
@@ -37,6 +37,12 @@
         h2 {
             font-size: 20px;
             margin-bottom: 15px;
+        }
+
+        h3 {
+            font-size: 18px;
+            margin-bottom: 10px;
+            border-bottom: none;
         }
 
         p {
@@ -74,14 +80,21 @@
             color: #fff;
         }
 
-        #add-selected-btn {
+        #add-selected-btn, #manage-dest-btn {
             background-color: #42b72a;
             width: auto;
+        }
+        #manage-dest-btn {
+            background-color: #6c757d;
         }
 
         #add-selected-btn:hover {
             background-color: #36a420;
         }
+        #manage-dest-btn:hover {
+            background-color: #5a6268;
+        }
+
 
         #clear-selected-btn {
             background-color: #fa383e;
@@ -153,6 +166,60 @@
             width: auto;
             margin-top: 0;
         }
+        
+        /* Styles for Destination Manager */
+        #destinations-manager {
+            border-top: 1px solid #dddfe2;
+            margin-top: 20px;
+            padding-top: 20px;
+        }
+        
+        #dest-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .dest-list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            border-radius: 6px;
+            margin-bottom: 5px;
+        }
+        .dest-list-item:nth-child(odd) {
+            background-color: #f7f7f7;
+        }
+        
+        .delete-dest-btn {
+            background-color: #fa383e;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 5px 10px;
+            font-size: 12px;
+            cursor: pointer;
+            width: auto;
+            margin-top: 0;
+        }
+        
+        #add-dest-form {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        #add-dest-form input {
+            flex-grow: 1;
+            margin-bottom: 0;
+        }
+                
+        #add-dest-form button {
+            width: auto;
+            margin-top: 0;
+            flex-shrink: 0;
+        }
+
     </style>
 </head>
 <body>
@@ -293,8 +360,11 @@
                     method: 'POST',
                     body: JSON.stringify(state)
                 });
+                // No need to re-load, just re-render with current state
+                render();
             } catch (error) {
                 console.error('Error saving data:', error);
+                alert('Failed to save data. Please check your connection and try again.');
             }
         }
 
@@ -324,6 +394,16 @@
                     }).join('')}
                     <button id="add-selected-btn">Add Selected</button>
                     <button id="clear-selected-btn">Clear Selection</button>
+                    <button id="manage-dest-btn">Manage Destinations</button>
+                </div>
+                <div id="destinations-manager" style="display: none;">
+                    <h3>Manage Destinations</h3>
+                    <ul id="dest-list"></ul>
+                    <form id="add-dest-form">
+                        <input type="text" id="new-dest-name" placeholder="Name" required>
+                        <input type="number" id="new-dest-mileage" placeholder="Mileage" step="0.1" required>
+                        <button type="submit">Add</button>
+                    </form>
                 </div>
                 <div>
                     <h2>Calibration</h2>
@@ -339,25 +419,33 @@
                     </div>
                 </div>
             `;
+            
+            // Also render the destinations manager list
+            const destList = document.getElementById('dest-list');
+            if (destList) {
+                destList.innerHTML = state.destinations.map(dest => `
+                    <li class="dest-list-item">
+                        <span>${dest.name} (${dest.mileage} km)</span>
+                        <button class="delete-dest-btn" data-name="${dest.name}">Delete</button>
+                    </li>
+                `).join('');
+            }
         }
 
-        function addMileage(mileage) {
+        async function addMileage(mileage) {
             state.currentMileage += mileage;
             state.selectedDestinations = [];
-            saveState();
-            render();
+            await saveState();
         }
 
-        function setFullCharge() {
+        async function setFullCharge() {
             state.currentMileage = 0;
-            saveState();
-            render();
+            await saveState();
         }
 
-        function setBattery(percentage) {
+        async function setBattery(percentage) {
             state.currentMileage = state.totalMileage * (1 - percentage / 100);
-            saveState();
-            render();
+            await saveState();
         }
 
         loginForm.addEventListener('submit', async (e) => {
@@ -389,7 +477,7 @@
             }
         });
 
-        mainContent.addEventListener('click', e => {
+        mainContent.addEventListener('click', async e => {
             if (!state) return;
 
             if (e.target.classList.contains('dest-btn')) {
@@ -402,7 +490,7 @@
             if (e.target.id === 'add-selected-btn') {
                 const totalMileageToAdd = state.selectedDestinations.reduce((total, dest) => total + dest.mileage, 0);
                 if (totalMileageToAdd > 0) {
-                    addMileage(totalMileageToAdd);
+                    await addMileage(totalMileageToAdd);
                 }
             }
 
@@ -412,17 +500,53 @@
             }
 
             if (e.target.id === 'full-charge-btn') {
-                setFullCharge();
+                await setFullCharge();
             }
 
             if (e.target.id === 'set-battery-btn') {
                 const batteryInput = document.getElementById('current-battery');
                 const percentage = parseFloat(batteryInput.value);
                 if (!isNaN(percentage) && percentage >= 0 && percentage <= 100) {
-                    setBattery(percentage);
+                    await setBattery(percentage);
                     batteryInput.value = '';
                 } else {
                     alert('Please enter a valid percentage (0-100).');
+                }
+            }
+            
+            if (e.target.id === 'manage-dest-btn') {
+                const manager = document.getElementById('destinations-manager');
+                const isVisible = manager.style.display === 'block';
+                manager.style.display = isVisible ? 'none' : 'block';
+            }
+            
+            if (e.target.classList.contains('delete-dest-btn')) {
+                const nameToDelete = e.target.dataset.name;
+                state.destinations = state.destinations.filter(d => d.name !== nameToDelete);
+                await saveState();
+            }
+        });
+        
+        mainContent.addEventListener('submit', async e => {
+            if (e.target.id === 'add-dest-form') {
+                e.preventDefault();
+                const nameInput = document.getElementById('new-dest-name');
+                const mileageInput = document.getElementById('new-dest-mileage');
+                const name = nameInput.value.trim();
+                const mileage = parseFloat(mileageInput.value);
+
+                if (name && !isNaN(mileage) && mileage > 0) {
+                    if (state.destinations.some(d => d.name.toLowerCase() === name.toLowerCase())) {
+                        alert('A destination with this name already exists.');
+                        return;
+                    }
+                    state.destinations.push({ name, mileage });
+                    state.destinations.sort((a,b) => a.name.localeCompare(b.name)); // Keep it sorted
+                    await saveState();
+                    nameInput.value = '';
+                    mileageInput.value = '';
+                } else {
+                    alert('Please enter a valid name and mileage.');
                 }
             }
         });
