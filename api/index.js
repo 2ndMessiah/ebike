@@ -19,10 +19,11 @@ const DEFAULT_EBIKE_DATA = {
   totalMileage: 60,
   currentMileage: 0,
   destinations: [
-    { name: 'Home', mileage: 7.7 },
-    { name: 'Work', mileage: 1.7 },
-    { name: 'Fangzhen', mileage: 3 },
-    { name: 'LGD', mileage: 7.2 }
+    { "name": "Work", "mileage": 1.7 },
+    { "name": "RY", "mileage": 7.7 },
+    { "name": "房镇", "mileage": 3 },
+    { "name": "花漾城", "mileage": 2.5 },
+    { "name": "理工大", "mileage": 7.2 }
   ],
   selectedDestinations: []
 };
