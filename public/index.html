@@ -241,6 +241,13 @@
             flex-shrink: 0;
         }
 
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+
+
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -419,7 +426,9 @@
                 </div>
                 <div>
                     <h2>Mileage History</h2>
-                    <canvas id="mileageChart"></canvas>
+                    <div class="chart-container">
+                        <canvas id="mileageChart"></canvas>
+                    </div>
                 </div>
                 <div>
                     <h2>Quick Add Mileage</h2>
