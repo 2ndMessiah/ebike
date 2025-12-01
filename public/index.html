@@ -242,6 +242,7 @@
         }
 
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div id="app">
@@ -417,6 +418,10 @@
                     <p>Battery: ${((1 - state.currentMileage / state.totalMileage) * 100).toFixed(2)}%</p>
                 </div>
                 <div>
+                    <h2>Mileage History</h2>
+                    <canvas id="mileageChart"></canvas>
+                </div>
+                <div>
                     <h2>Quick Add Mileage</h2>
                     ${state.destinations.map(dest => {
                         const count = selectionCounts[dest.name] || 0;
@@ -466,6 +471,60 @@
                     </li>
                 `).join('');
             }
+            renderHistoryChart();
+        }
+
+        let chartInstance = null; // Keep a reference to the chart
+
+        function renderHistoryChart() {
+            const ctx = document.getElementById('mileageChart');
+            if (!ctx || !state || !state.dailyMileage) {
+                return;
+            }
+
+            // Destroy previous chart instance to prevent duplicates
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            const dailyData = state.dailyMileage;
+            const sortedDates = Object.keys(dailyData).sort((a, b) => new Date(a) - new Date(b));
+            
+            const labels = sortedDates;
+            const data = sortedDates.map(date => dailyData[date].toFixed(2));
+
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Daily Mileage (km)',
+                        data: data,
+                        backgroundColor: 'rgba(24, 119, 242, 0.6)',
+                        borderColor: 'rgba(24, 119, 242, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Mileage (km)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Date'
+                            }
+                        }
+                    },
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
         }
 
         async function addMileage(mileage) {

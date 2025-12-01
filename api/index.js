@@ -3,6 +3,8 @@ const { Redis } = require('@upstash/redis');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const path = require('path');
+const { formatInTimeZone, utcToZonedTime } = require('date-fns-tz');
+const { subMonths, isBefore, parseISO } = require('date-fns');
 
 // Configuration variables
 // For Upstash Redis, ensure these two environment variables are set in Vercel
@@ -103,11 +105,53 @@ app.get('/api/data', authenticateToken, async (req, res) => {
 
 app.post('/api/data', authenticateToken, async (req, res) => {
   try {
-    const data = req.body;
-    await redisClient.set(`ebike:${req.user.id}`, data, {
+    const newData = req.body;
+    const userId = req.user.id;
+    const ebikeKey = `ebike:${userId}`;
+
+    // Fetch existing data
+    let existingData = await redisClient.get(ebikeKey);
+    if (!existingData) {
+      existingData = DEFAULT_EBIKE_DATA;
+    }
+
+    // Merge new data with existing data
+    const updatedData = { ...existingData, ...newData };
+
+    // --- Daily Mileage Tracking Logic ---
+    const now = new Date();
+    const singaporeTime = utcToZonedTime(now, 'Asia/Singapore');
+    const todayFormatted = formatInTimeZone(singaporeTime, 'Asia/Singapore', 'yyyy-MM-dd');
+
+    if (!updatedData.dailyMileage) {
+      updatedData.dailyMileage = {};
+    }
+
+    // Ensure currentMileage is a number before adding
+    const mileageToAdd = parseFloat(newData.currentMileage) || 0;
+
+    if (updatedData.dailyMileage[todayFormatted]) {
+      updatedData.dailyMileage[todayFormatted] += mileageToAdd;
+    } else {
+      updatedData.dailyMileage[todayFormatted] = mileageToAdd;
+    }
+
+    // --- Data Pruning Logic (retain last 6 months) ---
+    const sixMonthsAgo = subMonths(singaporeTime, 6);
+    for (const dateKey in updatedData.dailyMileage) {
+      if (Object.prototype.hasOwnProperty.call(updatedData.dailyMileage, dateKey)) {
+        const recordDate = parseISO(dateKey); // Parse the date string
+        if (isBefore(recordDate, sixMonthsAgo)) {
+          delete updatedData.dailyMileage[dateKey];
+        }
+      }
+    }
+    // --- End Daily Mileage Tracking Logic ---
+
+    await redisClient.set(ebikeKey, updatedData, {
       ex: EBIKE_DATA_EXPIRATION_SECONDS
     });
-    res.json({ message: 'Data saved successfully' });
+    res.json({ message: 'Data saved successfully', updatedData });
   } catch (error) {
     console.error('Error saving data:', error);
     res.status(500).json({ error: 'Failed to save data' });
