@@ -123,17 +123,26 @@ app.post('/api/data', authenticateToken, async (req, res) => {
     const singaporeTime = utcToZonedTime(now, 'Asia/Singapore');
     const todayFormatted = formatInTimeZone(singaporeTime, 'Asia/Singapore', 'yyyy-MM-dd');
 
+    // Calculate the mileage to add for today
+    const oldMileage = existingData ? parseFloat(existingData.currentMileage) || 0 : 0;
+    const newMileage = newData ? parseFloat(newData.currentMileage) || 0 : 0;
+    const mileageIncrement = newMileage - oldMileage;
+
     if (!updatedData.dailyMileage) {
       updatedData.dailyMileage = {};
     }
 
-    // Ensure currentMileage is a number before adding
-    const mileageToAdd = parseFloat(newData.currentMileage) || 0;
-
-    if (updatedData.dailyMileage[todayFormatted]) {
-      updatedData.dailyMileage[todayFormatted] += mileageToAdd;
-    } else {
-      updatedData.dailyMileage[todayFormatted] = mileageToAdd;
+    // Only add positive increments to avoid issues on reset
+    if (mileageIncrement > 0) {
+      if (updatedData.dailyMileage[todayFormatted]) {
+        updatedData.dailyMileage[todayFormatted] += mileageIncrement;
+      } else {
+        updatedData.dailyMileage[todayFormatted] = mileageIncrement;
+      }
+    } else if (!updatedData.dailyMileage[todayFormatted]) {
+      // If it's a new day with no record, and mileage might have been reset, initialize it.
+      // This handles the case where currentMileage is reset to 0, so the increment is negative.
+      updatedData.dailyMileage[todayFormatted] = 0;
     }
 
     // --- Data Pruning Logic (retain last 6 months) ---

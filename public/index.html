@@ -389,9 +389,15 @@
             const managerWasOpen = manager && manager.style.display === 'block';
 
             try {
+                // Create a shallow copy of the state to avoid modifying the original object
+                const stateToSend = { ...state };
+                // Remove the dailyMileage from the object sent to the backend
+                delete stateToSend.dailyMileage;
+
+
                 await apiFetch('/api/data', {
                     method: 'POST',
-                    body: JSON.stringify(state)
+                    body: JSON.stringify(stateToSend)
                 });
                 // No need to re-load, just re-render with current state
                 render();
