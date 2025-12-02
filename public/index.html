@@ -382,7 +382,7 @@
             }
         }
 
-        async function saveState() {
+        async function saveState(payload_extension = {}) {
             if (!state) return;
 
             const manager = document.getElementById('destinations-manager');
@@ -390,7 +390,7 @@
 
             try {
                 // Create a shallow copy of the state to avoid modifying the original object
-                const stateToSend = { ...state };
+                const stateToSend = { ...state, ...payload_extension };
                 // Remove the dailyMileage from the object sent to the backend
                 delete stateToSend.dailyMileage;
 
@@ -429,6 +429,11 @@
                 return acc;
             }, {});
 
+            // Format lastCharged time nicely
+            const lastChargedTime = state.lastCharged 
+                ? new Date(state.lastCharged).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) 
+                : 'Never';
+
             mainContent.innerHTML = `
                 <div>
                     <h2>Status</h2>
@@ -436,12 +441,14 @@
                     <p>Current Mileage: ${state.currentMileage.toFixed(2)} km</p>
                     <p>Remaining Mileage: ${(state.totalMileage - state.currentMileage).toFixed(2)} km</p>
                     <p>Battery: ${((1 - state.currentMileage / state.totalMileage) * 100).toFixed(2)}%</p>
+                    <p>Last Charged: ${lastChargedTime}</p>
                 </div>
                 <div>
-                    <h2>Mileage History</h2>
+                    <h2>Mileage History (Last 7 Days)</h2>
                     <div class="chart-container">
                         <canvas id="mileageChart"></canvas>
                     </div>
+                    <a href="/history.html" id="history-link" style="display: block; text-align: center; margin-top: 10px;">View Full History</a>
                 </div>
                 <div>
                     <h2>Quick Add Mileage</h2>
@@ -511,9 +518,12 @@
 
             const dailyData = state.dailyMileage;
             const sortedDates = Object.keys(dailyData).sort((a, b) => new Date(a) - new Date(b));
+
+            // Filter for the last 7 days
+            const last7Days = sortedDates.slice(-7);
             
-            const labels = sortedDates;
-            const data = sortedDates.map(date => dailyData[date].toFixed(2));
+            const labels = last7Days;
+            const data = last7Days.map(date => dailyData[date].toFixed(2));
 
             chartInstance = new Chart(ctx, {
                 type: 'bar',
@@ -557,7 +567,7 @@
 
         async function setFullCharge() {
             state.currentMileage = 0;
-            await saveState();
+            await saveState({ fullCharge: true });
         }
 
         async function setBattery(percentage) {

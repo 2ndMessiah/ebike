@@ -118,6 +118,12 @@ app.post('/api/data', authenticateToken, async (req, res) => {
     // Merge new data with existing data
     const updatedData = { ...existingData, ...newData };
 
+    // Check if this is a full charge event
+    if (newData.fullCharge) {
+        updatedData.lastCharged = new Date().toISOString();
+        delete updatedData.fullCharge; // Clean up the flag
+    }
+
     // --- Daily Mileage Tracking Logic ---
     const now = new Date();
     const singaporeTime = utcToZonedTime(now, 'Asia/Singapore');
