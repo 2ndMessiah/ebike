@@ -394,6 +394,13 @@
                 // Remove the dailyMileage from the object sent to the backend
                 delete stateToSend.dailyMileage;
 
+                // Add the client's current date to ensure correct day is recorded
+                const today = new Date();
+                const year = today.getFullYear();
+                const month = (today.getMonth() + 1).toString().padStart(2, '0');
+                const day = today.getDate().toString().padStart(2, '0');
+                stateToSend.clientDate = `${year}-${month}-${day}`;
+
 
                 await apiFetch('/api/data', {
                     method: 'POST',

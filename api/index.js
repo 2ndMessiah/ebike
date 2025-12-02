@@ -121,7 +121,8 @@ app.post('/api/data', authenticateToken, async (req, res) => {
     // --- Daily Mileage Tracking Logic ---
     const now = new Date();
     const singaporeTime = utcToZonedTime(now, 'Asia/Singapore');
-    const todayFormatted = formatInTimeZone(singaporeTime, 'Asia/Singapore', 'yyyy-MM-dd');
+    // Use the client's date if provided, otherwise fall back to server-calculated Singapore date
+    const todayFormatted = newData.clientDate || formatInTimeZone(singaporeTime, 'Asia/Singapore', 'yyyy-MM-dd');
 
     // Calculate the mileage to add for today
     const oldMileage = existingData ? parseFloat(existingData.currentMileage) || 0 : 0;
