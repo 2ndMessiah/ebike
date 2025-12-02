@@ -179,6 +179,11 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
+// Serve the history page
+app.get('/history.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'history.html'));
+});
+
 // Serve the main HTML file for the root
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
