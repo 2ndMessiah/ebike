@@ -139,20 +139,38 @@ app.post('/api/data', authenticateToken, async (req, res) => {
       updatedData.dailyMileage = {};
     }
 
-    // Only add positive increments to avoid issues on reset
-    if (mileageIncrement > 0) {
-      if (updatedData.dailyMileage[todayFormatted]) {
-        updatedData.dailyMileage[todayFormatted] += mileageIncrement;
-      } else {
-        updatedData.dailyMileage[todayFormatted] = mileageIncrement;
-      }
-    } else if (!updatedData.dailyMileage[todayFormatted]) {
-      // If it's a new day with no record, and mileage might have been reset, initialize it.
-      // This handles the case where currentMileage is reset to 0, so the increment is negative.
-      updatedData.dailyMileage[todayFormatted] = 0;
+    // Get today's record, ensuring it's an object to store mileage and destinations
+    let todayRecord = updatedData.dailyMileage[todayFormatted];
+    if (typeof todayRecord !== 'object' || todayRecord === null) {
+        const existingMileage = typeof todayRecord === 'number' ? todayRecord : 0;
+        todayRecord = { mileage: existingMileage, destinations: [] };
     }
 
-    // --- Data Pruning Logic (retain last 6 months) ---
+    // Only add positive increments to avoid issues on reset
+    if (mileageIncrement > 0) {
+        todayRecord.mileage += mileageIncrement;
+    } else if (!updatedData.dailyMileage[todayFormatted]) {
+      // If it's a new day with no record, and mileage might have been reset, initialize it.
+      // This handles the case where currentMileage is reset to 0 so the increment is negative.
+      todayRecord.mileage = 0;
+    }
+    
+    // Handle destinations
+    if (newData.selectedDestinations && newData.selectedDestinations.length > 0) {
+        if (!todayRecord.destinations) {
+            todayRecord.destinations = [];
+        }
+        // Assuming selectedDestinations are objects with a 'name' property
+        const destinationNames = newData.selectedDestinations.map(d => d.name);
+        todayRecord.destinations.push(...destinationNames);
+        
+        // After processing, clear selectedDestinations for the next session
+        updatedData.selectedDestinations = []; 
+    }
+
+    // Put the updated record back
+    updatedData.dailyMileage[todayFormatted] = todayRecord;
+
     const sixMonthsAgo = subMonths(singaporeTime, 6);
     for (const dateKey in updatedData.dailyMileage) {
       if (Object.prototype.hasOwnProperty.call(updatedData.dailyMileage, dateKey)) {

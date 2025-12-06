@@ -69,8 +69,10 @@
         }
         
         .history-item {
-            display: flex;
-            justify-content: space-between;
+            display: grid;
+            grid-template-columns: 120px 100px 1fr;
+            gap: 15px;
+            align-items: center;
             padding: 10px 15px;
             border-bottom: 1px solid #dddfe2;
         }
@@ -88,6 +90,28 @@
         .history-item .mileage {
             font-weight: bold;
             color: #1877f2;
+            text-align: right;
+        }
+
+        .history-item .destinations {
+            overflow-x: auto;
+            white-space: nowrap;
+            -webkit-overflow-scrolling: touch; /* for smooth scrolling on iOS */
+            scrollbar-width: thin; /* Firefox */
+        }
+        /* Simple scrollbar styling */
+        .history-item .destinations::-webkit-scrollbar {
+            height: 5px;
+        }
+        .history-item .destinations::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        .history-item .destinations::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 2px;
+        }
+        .history-item .destinations::-webkit-scrollbar-thumb:hover {
+            background: #555;
         }
 
     </style>
@@ -107,9 +131,14 @@
             </div>
             <div>
                 <h2>Daily Records</h2>
-                <ul id="history-list">
+                <div id="history-header" class="history-item" style="font-weight: bold; background-color: #f0f2f5;">
+                    <span class="date">Date</span>
+                    <span class="mileage" style="text-align: right;">Mileage</span>
+                    <span class="destinations">Destinations</span>
+                </div>
+                <div id="history-list">
                     <!-- Records will be injected here -->
-                </ul>
+                </div>
             </div>
         </div>
     </div>
@@ -184,17 +213,23 @@
             const sortedDates = Object.keys(dailyData).sort((a, b) => new Date(b) - new Date(a));
 
             if (sortedDates.length === 0) {
-                historyList.innerHTML = '<li>No records yet.</li>';
+                historyList.innerHTML = '<div class="history-item">No records yet.</div>';
                 return;
             }
 
             historyList.innerHTML = sortedDates.map(date => {
-                const mileage = dailyData[date].toFixed(2);
+                const record = dailyData[date];
+                const mileage = (typeof record === 'number' ? record : record.mileage).toFixed(2);
+                const destinations = (typeof record === 'object' && record.destinations && record.destinations.length > 0) ? record.destinations.join(', ') : 'N/A';
+                
                 return `
-                    <li class="history-item">
+                    <div class="history-item">
                         <span class="date">${date}</span>
                         <span class="mileage">${mileage} km</span>
-                    </li>
+                        <div class="destinations">
+                            <span>${destinations}</span>
+                        </div>
+                    </div>
                 `;
             }).join('');
         }
@@ -213,7 +248,12 @@
             const sortedDates = Object.keys(dailyData).sort((a, b) => new Date(a) - new Date(b));
             
             const labels = sortedDates;
-            const data = sortedDates.map(date => dailyData[date].toFixed(2));
+            const data = sortedDates.map(date => {
+                const record = dailyData[date];
+                // Handle both old (number) and new (object) data formats
+                const mileage = (typeof record === 'number' ? record : record.mileage) || 0;
+                return mileage.toFixed(2);
+            });
 
             chartInstance = new Chart(ctx, {
                 type: 'bar',
