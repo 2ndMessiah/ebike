@@ -25,7 +25,12 @@ const DEFAULT_EBIKE_DATA = {
     { "name": "RY", "mileage": 7.7 },
     { "name": "房镇", "mileage": 3 },
     { "name": "花漾城", "mileage": 2.5 },
-    { "name": "理工大", "mileage": 7.2 }
+    { "name": "食堂", "mileage": 1 },
+    { "name": "万达", "mileage": 7 },
+    { "name": "理工大", "mileage": 7 },
+    { "name": "图书馆", "mileage": 4.2 },
+    { "name": "WorkAIO", "mileage": 8.8 },
+    { "name": "鑫马吾悦", "mileage": 6.2 }
   ],
   selectedDestinations: []
 };
