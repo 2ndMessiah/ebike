@@ -402,11 +402,19 @@
                 stateToSend.clientDate = `${year}-${month}-${day}`;
 
 
-                await apiFetch('/api/data', {
+                const response = await apiFetch('/api/data', {
                     method: 'POST',
                     body: JSON.stringify(stateToSend)
                 });
-                // No need to re-load, just re-render with current state
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    state = result.updatedData; // Update the global state with the server's response
+                } else {
+                    throw new Error('Failed to save data to server');
+                }
+                
+                // Re-render with the new, authoritative state from the server
                 render();
 
                 if (managerWasOpen) {
@@ -565,19 +573,21 @@
         }
 
         async function addMileage(mileage) {
-            state.currentMileage += mileage;
-            state.selectedDestinations = [];
-            await saveState();
+            // Pass the new mileage in the payload.
+            // The current state.selectedDestinations will be included automatically.
+            // The server will process them and return a new state with selectedDestinations cleared.
+            await saveState({ currentMileage: state.currentMileage + mileage });
         }
 
         async function setFullCharge() {
-            state.currentMileage = 0;
-            await saveState({ fullCharge: true });
+            // Pass all state changes in the payload for a cleaner, more atomic update.
+            await saveState({ currentMileage: 0, fullCharge: true });
         }
 
         async function setBattery(percentage) {
-            state.currentMileage = state.totalMileage * (1 - percentage / 100);
-            await saveState();
+            const newMileage = state.totalMileage * (1 - percentage / 100);
+            // Pass the calculated new mileage in the payload.
+            await saveState({ currentMileage: newMileage });
         }
 
         loginForm.addEventListener('submit', async (e) => {
