@@ -523,7 +523,12 @@
             const last7Days = sortedDates.slice(-7);
             
             const labels = last7Days;
-            const data = last7Days.map(date => dailyData[date].toFixed(2));
+            const data = last7Days.map(date => {
+                const record = dailyData[date];
+                // Handle both old (number) and new (object) data formats
+                const mileage = (typeof record === 'number' ? record : record.mileage) || 0;
+                return mileage.toFixed(2);
+            });
 
             chartInstance = new Chart(ctx, {
                 type: 'bar',
